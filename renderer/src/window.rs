@@ -1,3 +1,8 @@
+/*
+ * Inclinced to change the struct Window to System as
+ * it seems more appropriate, keep calling window.window everywhere
+ * which is really silly
+*/
 use std::{
     error::Error, 
     time::Instant,
@@ -35,8 +40,10 @@ pub enum LoopStyle {
 }
 
 pub struct Window {
-    window: SystemWindow,
+    pub window: SystemWindow,
     pub event_loop: RefCell<SystemEventLoop<()>>,
+    pub height: u32,
+    pub width: u32
 }
 
 impl Window {
@@ -59,8 +66,10 @@ impl Window {
             .build(&event_loop)
             .unwrap();
         Ok(Self { 
-            window: window, 
+            window, 
             event_loop: RefCell::new(event_loop),
+            height: window_height,
+            width: window_width,
         })
     }
 

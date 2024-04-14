@@ -74,7 +74,7 @@ impl Window {
     }
 
     //ripped directly from /home/dale/third_party/ash/ash-examples/src/bin/texture.rs
-    pub fn render_loop<F: Fn()>(&self, f: F) -> Result<(), impl Error> {
+    pub fn render_loop<F: FnMut()>(&self, mut f: F) -> Result<(), impl Error> {
         self.event_loop.borrow_mut().run_on_demand(|event, elwp| {
             elwp.set_control_flow(SystemControlFlow::Poll);
             match event {

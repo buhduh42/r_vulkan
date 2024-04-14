@@ -21,7 +21,7 @@ use ash::{
 
 use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
-use crate::Window;
+use crate::window::Window;
 
 // Simple offset_of macro akin to C++ offsetof
 #[macro_export]
@@ -190,7 +190,7 @@ pub struct Vulkan {
 impl Vulkan {
     //TODO, gonna need to figure out this VkResult stuff
     //fn draw(self: &Self) -> VkResult<vk::RenderPass> {
-    pub fn get_draw_fn<F: Fn()> (self: &Self) -> F() {
+    pub fn get_draw_fn(self: &Self) -> Box<dyn FnMut() +'_> {
         let renderpass_attachments = [
             vk::AttachmentDescription {
                 format: self.surface_format.format,
@@ -239,6 +239,7 @@ impl Vulkan {
             .subpasses(std::slice::from_ref(&subpass))
             .dependencies(&dependencies);
 
+        let mut to_ret: Box<dyn FnMut()>;
         unsafe {
             let renderpass = self
                 .device
@@ -388,9 +389,9 @@ impl Vulkan {
                 .unwrap();
 
             let uniform_color_buffer_data = Vector3 {
-                x: 1.0,
-                y: 1.0,
-                z: 1.0,
+                x: 0.2,
+                y: 0.5,
+                z: 0.9,
                 _pad: 0.0,
             };
             let uniform_color_buffer_info = vk::BufferCreateInfo {
@@ -412,7 +413,7 @@ impl Vulkan {
                 vk::MemoryPropertyFlags::HOST_VISIBLE | 
                     vk::MemoryPropertyFlags::HOST_COHERENT,
             )
-            .expect("Unable to find suitable memorytype for the vertex buffer.");
+            .expect("Unable to find suitable memorytype for the fragment buffer.");
 
             let uniform_color_buffer_allocate_info = vk::MemoryAllocateInfo {
                 allocation_size: uniform_color_buffer_memory_req.size,
@@ -888,7 +889,8 @@ impl Vulkan {
 
             let graphic_pipeline = graphics_pipelines[0];
 
-            return || {
+            to_ret = Box::new(move || {
+
                 let (present_index, _) = self
                     .swapchain_loader
                     .acquire_next_image(
@@ -983,8 +985,9 @@ impl Vulkan {
                 self.swapchain_loader
                     .queue_present(self.present_queue, &present_info)
                     .unwrap();
-            }
+            });
         }
+        to_ret
     }
 
     pub fn new(window: &Window) -> Result<Self, Box<dyn Error>> {

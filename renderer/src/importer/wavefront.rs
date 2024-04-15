@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fs::File,
+};
 
 use regex::Regex;
 
@@ -35,7 +38,7 @@ impl Importer for Wavefront {
         self.pos = vals.map(|p| {
             if let Some(cap) = re.captures(p.trim()) {
                 let (x, y, z) = (&cap["x"], &cap["y"], &cap["z"]);
-                Ok(glm::Vector4::new(
+                Ok(Vector4::new(
                     x.parse::<PositionCoord>().unwrap(), //panic impossible
                     y.parse::<PositionCoord>().unwrap(), //panic impossible
                     z.parse::<PositionCoord>().unwrap(), //panic impossible
@@ -141,6 +144,27 @@ impl Importer for Wavefront {
             indeces,
         })
     }
+
+    fn get_position_iterator<'a, I>(&self, f: &File) -> Result<I, String>
+            where I: Iterator<Item = &'a str> {
+        todo!("not implemented");
+    }
+
+    fn get_texture_iterator<'a, I>(&self, f: &File) -> Result<I, String>
+            where I: Iterator<Item = &'a str> {
+        todo!("not implemented");
+    }
+
+    fn get_normal_iterator<'a, I>(&self, f: &File) -> Result<I, String>
+            where I: Iterator<Item = &'a str> {
+        todo!("not implemented");
+    }
+
+    fn get_index_iterator<'a, I>(&self, f: &File) -> Result<I, String>
+            where I: Iterator<Item = &'a str> {
+        todo!("not implemented");
+    }
+
 }
 
 #[cfg(test)]

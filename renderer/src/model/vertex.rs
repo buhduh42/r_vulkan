@@ -1,9 +1,6 @@
-pub trait DataType: glm::Primitive { type A; }
+//pub trait DataType: glm::Primitive { type A; }
 
-pub type PositionCoord = f32;
-pub type TextureCoord = f32;
-pub type NormalCoord = f32;
-
+/*
 pub struct PositionVertex {
     pos: glm::Vector4<PositionCoord>,
 }
@@ -22,5 +19,6 @@ pub struct NormalVertex {
 impl PositionVertex {
     //pub fn new(
 }
+*/
 
 //pub struct Vertex<T: DataType>(glm::Vector3<T>);

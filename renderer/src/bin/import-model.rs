@@ -1,16 +1,9 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn test_it() {
-        assert_eq!("1", "1");
-    }
+use renderer::importer::wavefront::Wavefront;
 
-    #[test]
-    fn another() {
-        panic!("it failed");
-    }
+enum Parser {
+    Wavefront(Wavefront),
 }
 
 fn main() {
-    println!("hello import-model");
+    let parser = Parser::Wavefront(Wavefront::new());
 }

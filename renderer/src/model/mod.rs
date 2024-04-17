@@ -8,6 +8,8 @@ use serde::{Serialize, Deserialize};
 pub use glm::Vector4;
 pub use glm::Vector2;
 
+pub mod primitives;
+
 //#[derive(Serialize, Deserialize, Debug)]
 pub enum Mesh {
     PositionMesh(Vec<PostionVertex>),
@@ -67,16 +69,18 @@ impl Serialize for PositionVector {
 */
 
 //#[derive(Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone)]
 pub struct TextureVertex {
-    pos: PositionVector,
-    uv: TextureVector,
+    pub pos: PositionVector,
+    pub uv: TextureVector,
 }
 
 //#[derive(Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone)]
 pub struct NormalVertex {
-    pos: PositionVector,
-    uv: TextureVector,
-    norm: NormalVector,
+    pub pos: PositionVector,
+    pub uv: TextureVector,
+    pub norm: NormalVector,
 }
 
 impl NormalVertex {
@@ -108,5 +112,16 @@ impl Model {
     pub fn write_to_disk(&self, file: &mut File) -> Result<(), String> {
         //bincode::serialize_into(file, self)
         todo!("not implemented");
+    }
+
+    pub fn get_vertices(&self) -> &[NormalVertex] {
+        match &self.mesh {
+            Mesh::NormalMesh(vertices) => {
+                vertices.as_slice()
+            },
+            _ => {
+                panic!("only normal vertices supported")
+            },
+        }
     }
 }

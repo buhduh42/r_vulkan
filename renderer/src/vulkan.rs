@@ -11,7 +11,6 @@ use std::{
 use ash::{
     ext::debug_utils,
     vk, Device, Entry, Instance,
-    prelude::VkResult,
     khr::{surface, swapchain},
     util::{
         Align,
@@ -21,7 +20,12 @@ use ash::{
 
 use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
-use crate::window::Window;
+use crate::{
+    model::{
+        primitives, NormalVector, NormalVertex, PositionVector, TextureVector
+    }, 
+    window::Window,
+};
 
 // Simple offset_of macro akin to C++ offsetof
 #[macro_export]
@@ -36,11 +40,13 @@ macro_rules! offset_of {
 }
 
 //taken from ash
+/*
 #[derive(Clone, Debug, Copy)]
 struct Vertex {
     pos: [f32; 4],
     uv: [f32; 2],
 }
+*/
 
 //taken from ash
 #[derive(Clone, Debug, Copy)]
@@ -239,7 +245,10 @@ impl Vulkan {
             .subpasses(std::slice::from_ref(&subpass))
             .dependencies(&dependencies);
 
-        let mut to_ret: Box<dyn FnMut()>;
+
+        //let model = primitives::hardcoded_square();
+        let model = primitives::make_primitive(primitives::Primitive::Sphere);
+        let to_ret: Box<dyn FnMut()>;
         unsafe {
             let renderpass = self
                 .device
@@ -265,9 +274,13 @@ impl Vulkan {
                 })
                 .collect();
 
-            let index_buffer_data = [0u32, 1, 2, 2, 3, 0];
+
+            //let index_buffer_data = [0u32, 1, 2, 2, 3, 0];
+            let index_buffer_data = model.indeces.clone();
+
             let index_buffer_info = vk::BufferCreateInfo {
-                size: mem::size_of_val(&index_buffer_data) as u64,
+                //size: mem::size_of_val(&index_buffer_data) as u64,
+                size: mem::size_of_val(index_buffer_data.as_slice()) as u64,
                 usage: vk::BufferUsageFlags::INDEX_BUFFER,
                 sharing_mode: vk::SharingMode::EXCLUSIVE,
                 ..Default::default()
@@ -318,27 +331,59 @@ impl Vulkan {
             self.device
                 .bind_buffer_memory(index_buffer, index_buffer_memory, 0)
                 .unwrap();
-
+            
+            let vertices = model.get_vertices();
+            /*
             let vertices = [
-                Vertex {
-                    pos: [-1.0, -1.0, 0.0, 1.0],
-                    uv: [0.0, 0.0],
+                NormalVertex {
+                    pos: PositionVector::new(
+                        -1.0, -1.0, 0.0, 1.0
+                    ),
+                    uv: TextureVector::new(
+                        0.0, 0.0
+                    ),
+                    norm: NormalVector::new(
+                        -1.0, -1.0, 0.0, 1.0
+                    ),
                 },
-                Vertex {
-                    pos: [-1.0, 1.0, 0.0, 1.0],
-                    uv: [0.0, 1.0],
+                NormalVertex {
+                    pos: PositionVector::new(
+                        -1.0, 1.0, 0.0, 1.0
+                    ),
+                    uv: TextureVector::new(
+                        0.0, 1.0
+                    ),
+                    norm: NormalVector::new(
+                        -1.0, -1.0, 0.0, 1.0
+                    ),
                 },
-                Vertex {
-                    pos: [1.0, 1.0, 0.0, 1.0],
-                    uv: [1.0, 1.0],
+                NormalVertex {
+                    pos: PositionVector::new(
+                        1.0, 1.0, 0.0, 1.0
+                    ),
+                    uv: TextureVector::new(
+                        1.0, 1.0
+                    ),
+                    norm: NormalVector::new(
+                        -1.0, -1.0, 0.0, 1.0
+                    ),
                 },
-                Vertex {
-                    pos: [1.0, -1.0, 0.0, 1.0],
-                    uv: [1.0, 0.0],
+                NormalVertex {
+                    pos: PositionVector::new(
+                        1.0, -1.0, 0.0, 1.0
+                    ),
+                    uv: TextureVector::new(
+                        1.0, 0.0
+                    ),
+                    norm: NormalVector::new(
+                        -1.0, -1.0, 0.0, 1.0
+                    ),
                 },
             ];
+            */
             let vertex_input_buffer_info = vk::BufferCreateInfo {
-                size: mem::size_of_val(&vertices) as u64,
+                //size: mem::size_of_val(&vertices) as u64,
+                size: mem::size_of_val(vertices) as u64,
                 usage: vk::BufferUsageFlags::VERTEX_BUFFER,
                 sharing_mode: vk::SharingMode::EXCLUSIVE,
                 ..Default::default()
@@ -379,10 +424,12 @@ impl Vulkan {
                 .unwrap();
             let mut slice = Align::new(
                 vert_ptr,
-                mem::align_of::<Vertex>() as u64,
+                //mem::align_of::<Vertex>() as u64,
+                mem::align_of::<NormalVertex>() as u64,
                 vertex_input_buffer_memory_req.size,
             );
-            slice.copy_from_slice(&vertices);
+            //slice.copy_from_slice(&vertices);
+            slice.copy_from_slice(vertices);
             self.device.unmap_memory(vertex_input_buffer_memory);
             self.device
                 .bind_buffer_memory(vertex_input_buffer, vertex_input_buffer_memory, 0)
@@ -445,7 +492,8 @@ impl Vulkan {
                 .unwrap();
 
             //TODO(resources)
-            let image = image::load_from_memory(include_bytes!("../assets/rust.png"))
+            //let image = image::load_from_memory(include_bytes!("../assets/rust.png"))
+            let image = image::load_from_memory(include_bytes!("../../assets/textures/2k_jupiter.png"))
                 .unwrap()
                 .to_rgba8();
             let (width, height) = image.dimensions();
@@ -778,7 +826,8 @@ impl Vulkan {
             ];
             let vertex_input_binding_descriptions = [vk::VertexInputBindingDescription {
                 binding: 0,
-                stride: mem::size_of::<Vertex>() as u32,
+                //stride: mem::size_of::<Vertex>() as u32,
+                stride: mem::size_of::<NormalVertex>() as u32,
                 input_rate: vk::VertexInputRate::VERTEX,
             }];
             let vertex_input_attribute_descriptions = [
@@ -787,14 +836,24 @@ impl Vulkan {
                     binding: 0,
                     format: vk::Format::R32G32B32A32_SFLOAT,
                     //TODO:(investigate offset_of!)
-                    offset: offset_of!(Vertex, pos) as u32,
+                    //offset: offset_of!(Vertex, pos) as u32,
+                    offset: offset_of!(NormalVertex, pos) as u32,
                 },
                 vk::VertexInputAttributeDescription {
                     location: 1,
                     binding: 0,
                     format: vk::Format::R32G32_SFLOAT,
                     //TODO:(investigate offset_of!)
-                    offset: offset_of!(Vertex, uv) as u32,
+                    //offset: offset_of!(Vertex, uv) as u32,
+                    offset: offset_of!(NormalVertex, uv) as u32,
+                },
+                vk::VertexInputAttributeDescription {
+                    location: 2,
+                    binding: 0,
+                    format: vk::Format::R32G32B32A32_SFLOAT,
+                    //TODO:(investigate offset_of!)
+                    //offset: offset_of!(Vertex, pos) as u32,
+                    offset: offset_of!(NormalVertex, norm) as u32,
                 },
             ];
             let vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo

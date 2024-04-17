@@ -1,91 +1,87 @@
-use std::{
-    collections::HashMap,
-    fs::File,
-};
+use std::collections::HashMap;
 
 use regex::Regex;
 
 use super::Importer;
 
 use crate::model::{
-    IndexCoord, Model, NormalCoord, NormalVertex, 
-    PositionCoord, TextureCoord, Vector2, Vector4,
-    Mesh,
+    Mesh, Model, NormalVector, 
+    NormalVertex, PositionVector, TextureVector, 
+    IndexVector, IndexCoord,
+    DEFAULT_MODEL_NAME,
 };
 
 pub struct Wavefront{
-    pos: Vec<Vector4<PositionCoord>>,
-    uv: Vec<Vector2<TextureCoord>>,
-    norm: Vec<Vector4<NormalCoord>>,
+    pos: Vec<PositionVector>,
+    uv: Vec<TextureVector>,
+    norm: Vec<NormalVector>,
+    name: String,
 }
 
 impl Wavefront {
-    pub fn new() -> Self {
+    pub fn new(name: Option<String>) -> Self {
         Self{
+            name: name.unwrap_or_else(|| DEFAULT_MODEL_NAME.to_string()),
             pos: Vec::new(),
             uv: Vec::new(),
             norm: Vec::new(),
         }
     }
-}
 
-//TODO(errors)
-impl Importer for Wavefront {
     fn load_position_vector<'a, I>(&mut self, vals: I) -> Result<(), String>
-            where I: Iterator<Item = &'a str> {
+            where I: Iterator<Item = &'a String> {
         let re = Regex::new(r"^v (?P<x>-?\d+\.\d+) (?P<y>-?\d+\.\d+) (?P<z>-?\d+\.\d+)$")
             .unwrap(); //should never panic as this pattern is hardcoded
         self.pos = vals.map(|p| {
             if let Some(cap) = re.captures(p.trim()) {
                 let (x, y, z) = (&cap["x"], &cap["y"], &cap["z"]);
-                Ok(Vector4::new(
-                    x.parse::<PositionCoord>().unwrap(), //panic impossible
-                    y.parse::<PositionCoord>().unwrap(), //panic impossible
-                    z.parse::<PositionCoord>().unwrap(), //panic impossible
+                Ok(PositionVector::new(
+                    x.parse().unwrap(),
+                    y.parse().unwrap(),
+                    z.parse().unwrap(),
                     1.0,
                 ))
             } else {
                 Err(format!("Unable to parse wavefront position vector: {}", p))
             }
-        }).collect::<Result<Vec<Vector4<PositionCoord>>, String>>()?;
+        }).collect::<Result<Vec<PositionVector>, String>>()?;
         Ok(())
     }
 
     fn load_texture_vector<'a, I>(&mut self, vals: I) -> Result<(), String>
-            where I: Iterator<Item = &'a str> {
+            where I: Iterator<Item = &'a String> {
         let re = Regex::new(r"^vt (?P<u>-?\d+\.\d+) (?P<v>-?\d+\.\d+)$")
             .unwrap(); //should never panic as this pattern is hardcoded
         self.uv = vals.map(|t| {
             if let Some(cap) = re.captures(t.trim()) {
                 let (u, v) = (&cap["u"], &cap["v"]);
-                Ok(Vector2::new(
-                    u.parse::<PositionCoord>().unwrap(), //panic impossible
-                    v.parse::<PositionCoord>().unwrap(), //panic impossible
+                Ok(TextureVector::new(
+                    u.parse().unwrap(), v.parse().unwrap(),
                 ))
             } else {
                 Err(format!("Unable to parse wavefront texture vector: {}", t))
             }
-        }).collect::<Result<Vec<Vector2<TextureCoord>>, String>>()?;
+        }).collect::<Result<Vec<TextureVector>, String>>()?;
         Ok(())
     }
 
     fn load_normal_vector<'a, I>(&mut self, vals: I) -> Result<(), String>
-            where I: Iterator<Item = &'a str> {
+            where I: Iterator<Item = &'a String> {
         let re = Regex::new(r"^vn (?P<x>-?\d+\.\d+) (?P<y>-?\d+\.\d+) (?P<z>-?\d+\.\d+)$")
             .unwrap(); //should never panic as this pattern is hardcoded
         self.norm = vals.map(|n| {
             if let Some(cap) = re.captures(n.trim()) {
                 let (x, y, z) = (&cap["x"], &cap["y"], &cap["z"]);
-                Ok(Vector4::new(
-                    x.parse::<NormalCoord>().unwrap(), //panic impossible
-                    y.parse::<NormalCoord>().unwrap(), //panic impossible
-                    z.parse::<NormalCoord>().unwrap(), //panic impossible
+                Ok(NormalVector::new(
+                    x.parse().unwrap(),
+                    y.parse().unwrap(),
+                    z.parse().unwrap(),
                     1.0,
                 ))
             } else {
                 Err(format!("Unable to parse wavefront normal vector: {}", n))
             }
-        }).collect::<Result<Vec<Vector4<TextureCoord>>, String>>()?;
+        }).collect::<Result<Vec<NormalVector>, String>>()?;
         Ok(())
     }
 
@@ -96,14 +92,14 @@ impl Importer for Wavefront {
     //not sure about the above anymore...will need to run it through a debugger
     //though may be good at some point to write a defragger for Model
     fn generate_model<'a, I>(&self, vals: I) -> Result<Model, String>
-            where I: Iterator<Item = &'a str> {
+            where I: Iterator<Item = &'a String> {
         let vert_1 = r"(?P<vert_1>(?P<pos_1>\d+)/(?P<tex_1>\d+)/(?P<norm_1>\d+))";
         let vert_2 = r"(?P<vert_2>(?P<pos_2>\d+)/(?P<tex_2>\d+)/(?P<norm_2>\d+))";
         let vert_3 = r"(?P<vert_3>(?P<pos_3>\d+)/(?P<tex_3>\d+)/(?P<norm_3>\d+))";
         let re = Regex::new(format!(r"^f {vert_1} {vert_2} {vert_3}$").as_str())
             .unwrap(); //should never panic as this pattern is hardcoded
         let mut face_map: HashMap<String, IndexCoord> = HashMap::new();
-        let mut indeces: Vec<IndexCoord> = vec![];
+        let mut indeces: IndexVector = vec![];
         let mut vertices: Vec<NormalVertex> = vec![];
         let mut update_fn = |cap: &regex::Captures, i: i32| {
             if face_map.contains_key(&cap[format!("vert_{i}").as_str()]) {
@@ -142,29 +138,86 @@ impl Importer for Wavefront {
         Ok(Model{
             mesh: Mesh::NormalMesh(vertices),
             indeces,
+            name: self.name.clone(),
         })
     }
+}
 
-    fn get_position_iterator<'a, I>(&self, f: &File) -> Result<I, String>
-            where I: Iterator<Item = &'a str> {
-        todo!("not implemented");
+enum WavefrontLineType {
+    Position,
+    Texture,
+    Normal,
+    Face,
+    Name,
+}
+
+impl WavefrontLineType {
+    fn get(line: &str) -> Option<Self> {
+        if line.trim().starts_with("v ") {
+            return Some(Self::Position);
+        } else if line.trim().starts_with("vn ") {
+            return Some(Self::Normal);
+        } else if line.trim().starts_with("vt ") {
+            return Some(Self::Texture);
+        } else if line.trim().starts_with("f ") {
+            return Some(Self::Face);
+        } else if line.trim().starts_with("o ") {
+            return Some(Self::Name);
+        }
+        None
     }
+}
 
-    fn get_texture_iterator<'a, I>(&self, f: &File) -> Result<I, String>
-            where I: Iterator<Item = &'a str> {
-        todo!("not implemented");
+impl Importer for Wavefront {
+    fn generate_model<'a, I>(&self, lines: I) -> Result<Model, String>
+            where I: Iterator<Item = &'a String> {
+        let mut pos_vec: Vec<String> = vec![];
+        let mut text_vec: Vec<String> = vec![];
+        let mut norm_vec: Vec<String> = vec![];
+        let mut face_vec: Vec<String> = vec![];
+        let mut name_opt: Option<String> = None;
+        let name_re = Regex::new(r"^o (?P<name>\w+)\s*$").unwrap();
+        lines.for_each(|l| {
+            if let Some(line_type) = WavefrontLineType::get(l) {
+                let line = l.to_string();
+                match line_type {
+                    WavefrontLineType::Position => {
+                        pos_vec.push(line);
+                    },
+                    WavefrontLineType::Texture => {
+                        text_vec.push(line);
+                    },
+                    WavefrontLineType::Normal => {
+                        norm_vec.push(line);
+                    },
+                    WavefrontLineType::Face => {
+                        face_vec.push(line);
+                    },
+                    WavefrontLineType::Name => {
+                        if let Some(cap) = name_re.captures(&line) {
+                            name_opt = Some(cap["name"].to_string());
+                        }
+                    },
+                }
+            }
+        });
+        if name_opt.is_none() {
+            return Err(
+                String::from("Could not deternmine model name from passed iterator")
+            );
+        }
+        let mut wavefront = Self::new(name_opt);
+        if let Err(res) = wavefront.load_position_vector(pos_vec.iter()) {
+            return Err(res);
+        }
+        if let Err(res) = wavefront.load_normal_vector(norm_vec.iter()) {
+            return Err(res);
+        }
+        if let Err(res) = wavefront.load_texture_vector(text_vec.iter()) {
+            return Err(res);
+        }
+        wavefront.generate_model(face_vec.iter())
     }
-
-    fn get_normal_iterator<'a, I>(&self, f: &File) -> Result<I, String>
-            where I: Iterator<Item = &'a str> {
-        todo!("not implemented");
-    }
-
-    fn get_index_iterator<'a, I>(&self, f: &File) -> Result<I, String>
-            where I: Iterator<Item = &'a str> {
-        todo!("not implemented");
-    }
-
 }
 
 #[cfg(test)]
@@ -189,9 +242,11 @@ mod tests {
         let file_name = "wavefront_good_positions.txt";
         let data = read_to_string(format!("{TEST_DIRECTORY}/{file_name}"))
             .expect(format!("Could not open 'testdata/{file_name}' for reading.")
-                .as_str());
-        let mut wavefront = Wavefront::new();
-        let _ = wavefront.load_position_vector(data.lines()).unwrap();
+                .as_str()).to_string();
+        let mut wavefront = Wavefront::new(None);
+        //let _ = wavefront.load_position_vector(data.lines()).unwrap();
+        let to_parse: Vec<String> = data.lines().map(|l| l.to_string()).collect();
+        let _ = wavefront.load_position_vector(to_parse.iter()).unwrap();
         assert_eq!(wavefront.pos.len(), 64, "pos vector length");
         assert_eq!(wavefront.pos[0], Vector4::new(0.0, 3.080803, 3.080803, 1.0));
         assert_eq!(
@@ -205,8 +260,9 @@ mod tests {
         let data = read_to_string(format!("{TEST_DIRECTORY}/{file_name}"))
             .expect(format!("Could not open 'testdata/{file_name}' for reading.")
                 .as_str());
-        let mut wavefront = Wavefront::new();
-        let _ = wavefront.load_texture_vector(data.lines()).unwrap();
+        let mut wavefront = Wavefront::new(None);
+        let to_parse: Vec<String> = data.lines().map(|l| l.to_string()).collect();
+        let _ = wavefront.load_texture_vector(to_parse.iter()).unwrap();
         assert_eq!(wavefront.uv.len(), 130, "uv vector length");
         assert_eq!(wavefront.uv[22], Vector2::new(0.656250, 0.5));
         assert_eq!(wavefront.uv[86], Vector2::new(0.203178, 0.014612));
@@ -218,8 +274,9 @@ mod tests {
         let data = read_to_string(format!("{TEST_DIRECTORY}/{file_name}"))
             .expect(format!("Could not open 'testdata/{file_name}' for reading.")
                     .as_str());
-        let mut wavefront = Wavefront::new();
-        let _ = wavefront.load_normal_vector(data.lines()).unwrap();
+        let mut wavefront = Wavefront::new(None);
+        let to_parse: Vec<String> = data.lines().map(|l| l.to_string()).collect();
+        let _ = wavefront.load_normal_vector(to_parse.iter()).unwrap();
         assert_eq!(wavefront.norm.len(), 34, "norm vector length");
         assert_eq!(wavefront.norm[13], Vector4::new(-0.4714, -0.0, -0.8819, 1.0));
         assert_eq!(
@@ -248,11 +305,22 @@ mod tests {
         let norm_data = read_to_string(format!("{TEST_DIRECTORY}/{norm_file}"))
             .expect(format!("Could not open 'testdata/{norm_file}' for reading.")
                 .as_str());
-        let mut wavefront = Wavefront::new();
-        wavefront.load_position_vector(pos_data.lines()).unwrap();
-        wavefront.load_texture_vector(tex_data.lines()).unwrap();
-        wavefront.load_normal_vector(norm_data.lines()).unwrap();
-        let model = wavefront.generate_model(index_data.lines()).unwrap();
+        let mut wavefront = Wavefront::new(None);
+
+        let to_pos_parse: Vec<String> = pos_data.lines().map(|l| l.to_string()).collect();
+        wavefront.load_position_vector(to_pos_parse.iter()).unwrap();
+
+        let to_tex_parse: Vec<String> = tex_data.lines().map(|l| l.to_string()).collect();
+        wavefront.load_texture_vector(to_tex_parse.iter()).unwrap();
+
+        let to_norm_parse: Vec<String> = norm_data.lines()
+            .map(|l| l.to_string()).collect();
+        wavefront.load_normal_vector(to_norm_parse.iter()).unwrap();
+
+        let to_index_parse: Vec<String> = index_data.lines()
+            .map(|l| l.to_string()).collect();
+        let model = wavefront.generate_model(to_index_parse.iter()).unwrap();
+
         assert_eq!(model.indeces.len(), 124*3);
         //6/64/31 first occurrence is 91st, 192nd
         //43/43/21 62nd, 163rd
@@ -266,8 +334,9 @@ mod tests {
         let data = read_to_string(format!("{TEST_DIRECTORY}/{file_name}"))
             .expect(format!("Could not open 'testdata/{file_name}' for reading.")
                 .as_str());
-        let mut wavefront = Wavefront::new();
-        let _ = wavefront.load_position_vector(data.lines()).unwrap();
+        let mut wavefront = Wavefront::new(None);
+        let to_parse: Vec<String> = data.lines().map(|l| l.to_string()).collect();
+        let _ = wavefront.load_position_vector(to_parse.iter()).unwrap();
     }
 
     #[test]
@@ -277,8 +346,9 @@ mod tests {
         let data = read_to_string(format!("{TEST_DIRECTORY}/{file_name}"))
             .expect(format!("Could not open 'testdata/{file_name}' for reading.")
                 .as_str());
-        let mut wavefront = Wavefront::new();
-        let _ = wavefront.load_texture_vector(data.lines()).unwrap();
+        let mut wavefront = Wavefront::new(None);
+        let to_parse: Vec<String> = data.lines().map(|l| l.to_string()).collect();
+        let _ = wavefront.load_texture_vector(to_parse.iter()).unwrap();
         assert_eq!(wavefront.uv.len(), 130, "uv vector length");
         assert_eq!(wavefront.uv[22], glm::Vector2::new(0.656250, 1.0));
         assert_eq!(wavefront.uv[86], glm::Vector2::new(0.485388, 0.203178));
@@ -291,8 +361,9 @@ mod tests {
         let data = read_to_string(format!("{TEST_DIRECTORY}/{file_name}"))
             .expect(format!("Could not open 'testdata/{file_name}' for reading.")
                     .as_str());
-        let mut wavefront = Wavefront::new();
-        let _ = wavefront.load_normal_vector(data.lines()).unwrap();
+        let mut wavefront = Wavefront::new(None);
+        let to_parse: Vec<String> = data.lines().map(|l| l.to_string()).collect();
+        let _ = wavefront.load_normal_vector(to_parse.iter()).unwrap();
         assert_eq!(wavefront.norm.len(), 34, "norm vector length");
         assert_eq!(wavefront.norm[13], glm::Vector4::new(-0.4714, -0.0, -0.8819, 1.0));
         assert_eq!(

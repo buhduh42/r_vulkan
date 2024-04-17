@@ -1,4 +1,9 @@
-use std::fs::File;
+/*
+ * I should probably add a backup as this gets more "serious"
+ */
+use std::fs::{
+    read_to_string, File, OpenOptions,
+};
 
 use clap::Parser;
 
@@ -17,7 +22,7 @@ const WAVEFRONT: &str = "wavefront";
 #[command(version, about, long_about = None)]
 struct Args {
     #[arg(short, long, default_value = WAVEFRONT)]
-    file_type: String,
+    parser: String,
 
     #[arg(short, long)]
     in_files: Vec<String>,
@@ -26,28 +31,37 @@ struct Args {
     out_files: Vec<String>,
 }
 
+fn make_importer(parser: &str) -> Result<impl Importer, String> {
+    match parser.trim() {
+        WAVEFRONT => {
+            Ok(Wavefront::new(None))
+        },
+        &_ => {
+            Err(format!("Unrecognized file_type passed: '{parser}', exiting"))
+        },
+    }
+}
+
+//NOTE, only handles a single model per input...for now
 fn main() {
     let args = Args::parse();
-    if args.out_files.len() > args.in_files.len() {
-        panic!("in_files count must be equal to or greater than out_files");
+    if args.out_files.len() != args.in_files.len() {
+        panic!("in_files count must be equal to out_files count");
     }
-
-    let wavefront = String::from(WAVEFRONT);
-    let file_type = args.file_type;
-    let mut parser = match file_type {
-        wavefront => Wavefront::new(),
-    };
-    let models: Vec<Model> = vec![];
-    for (i, f) in args.in_files.iter().enumerate() {
-        let in_file = File::open(f)
-            .expect(format!("Could not open file: {f} for reading").as_str());
-        let pos_iter = parser.get_position_iterator(&in_file).unwrap();
-        let tex_iter = parser.get_position_iterator(&in_file).unwrap();
-        let norm_iter = parser.get_position_iterator(&in_file).unwrap();
-        let index_iter = parser.get_index_iterator(&in_file).unwrap();
-        parser.load_position_vector(pos_iter);
-        parser.load_texture_vector(tex_iter);
-        parser.load_normal_vector(norm_iter);
+    let parser = make_importer(&args.parser).unwrap();
+    let models: Vec<Model> = args.in_files.iter().map(|f| {
+        //this is really dumb...but im new to rust so w/e, ill develop better patterns
+        //not a critical loop anyway
+        let lines: Vec<String> = read_to_string(f)
+            .expect(format!("Could not open in_file: '{f}' for reading.").as_str())
+            .lines().map(|l| l.to_string()).collect();
+        parser.generate_model(lines.iter()).unwrap()
+    }).collect();
+    for (i, m) in models.iter().enumerate() {
+        let out_file_name = &args.out_files[i];
+        let out_file = OpenOptions::new().create(true).write(true).open(out_file_name);
+        //m.write_to_disk(out_file).unwrap();
+        //println!("mesh: {:?}", m);
+        //write!("{}", m);
     }
-    //parser.get_position_iterator(f)
 }

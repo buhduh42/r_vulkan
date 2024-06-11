@@ -1,0 +1,4 @@
+this serves as *targeted* list of things i need to do, will break it down into manageable chunks so I don't become overwelmed
+
+1.  Write basic asset tool, needs to generate an XML file and save to disk or print to stdout, functions as a standalone bin
+2. The time has come for make!!!

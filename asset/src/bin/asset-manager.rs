@@ -9,19 +9,11 @@ use clap::Parser;
 use glob::glob;
 
 use asset::{
-    source::local_file::LocalFile,
     asset::{
-        Asset,
-        ModelType,
-        AssetSubType,
         path_defs::{
-            REL_MODEL_PATH,
-            REL_TEXTURE_PATH,
-            REL_WAVEFRONT_MODELS_PATH,
-            WAVEFRONT_EXTENSION,
-            TEXTURE_EXTENSION,
-        },
-    },
+            REL_MODEL_PATH, REL_TEXTURE_PATH, REL_WAVEFRONT_MODELS_PATH, TEXTURE_EXTENSION, WAVEFRONT_EXTENSION
+        }, Asset, AssetType, ModelType
+    }, source::{local_file::LocalFile, AssetSource}
 };
 
 /*
@@ -54,7 +46,7 @@ struct Args {
 
 fn parse_assets_dir(assets_path: &Path) -> Result<Vec<Asset>, String> {
     let models_path = assets_path.join(REL_MODEL_PATH);
-    let to_ret: Vec<Asset> = vec!();
+    let mut to_ret: Vec<Asset> = vec!();
     if models_path.exists() {
         let wavefront_path = models_path.join(REL_WAVEFRONT_MODELS_PATH);
         if wavefront_path.exists() {
@@ -63,18 +55,18 @@ fn parse_assets_dir(assets_path: &Path) -> Result<Vec<Asset>, String> {
                 //probably a cleaner if let syntax here...
                 match entry {
                     Ok(path) => {
-                        let name: String = path.file_stem().unwrap();
+                        let name: &str = path.file_stem().unwrap().to_str().unwrap();
                         to_ret.push(
                             Asset{
                                 location: Some(path.display().to_string()),
                                 asset_type: AssetType::Model(Some(ModelType::Wavefront)),
-                                name,
-                                id: name,
+                                name: name.to_string(),
+                                id: name.to_string(),
                             },
                         );
                     },
-                    Err(_) => {
-                        return entry;
+                    Err(err) => {
+                        return Err(format!("wavefront glob() failed with: {err}"));
                     },
                 }
             }
@@ -87,18 +79,18 @@ fn parse_assets_dir(assets_path: &Path) -> Result<Vec<Asset>, String> {
             //probably a cleaner if let syntax here...
             match entry {
                 Ok(path) => {
-                    let name: String = path.file_stem().unwrap();
+                    let name: &str = path.file_stem().unwrap().to_str().unwrap();
                     to_ret.push(
                         Asset{
                             location: Some(path.display().to_string()),
                             asset_type: AssetType::Texture,
-                            name,
-                            id: name,
+                            name: name.to_string(),
+                            id: name.to_string(),
                         },
                     );
                 },
-                Err(_) => {
-                    return entry;
+                Err(err) => {
+                    return Err(format!("texture glob() failed with: {err}"));
                 },
             }
         }
@@ -109,6 +101,7 @@ fn parse_assets_dir(assets_path: &Path) -> Result<Vec<Asset>, String> {
 
 fn main() -> Result<(), String> {
     let args = Args::parse();
+    let mut source: Box<dyn AssetSource>;
     if !args.xml {
         return Err("xml flag MUST be present for now".to_string());
     } else {
@@ -120,7 +113,7 @@ fn main() -> Result<(), String> {
             //this is lazy....
             Box::new(File::create(args.manifest_file).unwrap())
         };
-        let xml_file = LocalFile::new(writer);
+        source = Box::new(LocalFile::new(writer));
     }
     let assets_directory = args.assets_directory;
     let assets_path = Path::new(&assets_directory);
@@ -129,6 +122,8 @@ fn main() -> Result<(), String> {
             format!("assets_directory does not exist: '{assets_directory}', exiting")
         );
     }
-    let abs_assets_path = fs::canonicalize(assets_path);
-    todo!("not implemented");
+    let abs_assets_path = fs::canonicalize(assets_path).unwrap();
+    let assets = parse_assets_dir(&abs_assets_path);
+    source.save(assets?)?;
+    Ok(())
 }

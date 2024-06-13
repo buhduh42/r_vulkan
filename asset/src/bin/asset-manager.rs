@@ -11,7 +11,9 @@ use glob::glob;
 use asset::{
     asset::{
         path_defs::{
-            REL_MODEL_PATH, REL_TEXTURE_PATH, REL_WAVEFRONT_MODELS_PATH, TEXTURE_EXTENSION, WAVEFRONT_EXTENSION
+            REL_MODEL_PATH, REL_TEXTURE_PATH, 
+            REL_WAVEFRONT_MODELS_PATH, 
+            TEXTURE_EXTENSION, WAVEFRONT_EXTENSION,
         }, Asset, AssetType, ModelType
     }, source::{local_file::LocalFile, AssetSource}
 };

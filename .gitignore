@@ -3,3 +3,4 @@ ash
 *.sw[a-z]
 *.bak
 spikes/
+build/

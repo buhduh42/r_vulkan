@@ -9,6 +9,7 @@ pub use glm::Vector4;
 pub use glm::Vector2;
 
 pub mod primitives;
+pub mod model_manager;
 
 //#[derive(Serialize, Deserialize, Debug)]
 pub enum Mesh {

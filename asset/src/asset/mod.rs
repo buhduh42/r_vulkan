@@ -3,7 +3,7 @@ use core::fmt;
 pub mod path_defs;
 
 pub enum AssetType {
-    Model(Option<ModelType>),
+    Model(ModelType),
     Texture,
 }
 
@@ -41,7 +41,7 @@ impl AssetType {
         if tpe == MODEL_TYPE {
             if sub_type == WAVEFRONT_TYPE {
                 return Ok(
-                    AssetType::Model(Some(ModelType::Wavefront))
+                    AssetType::Model(ModelType::Wavefront)
                 );
             }
             return Err("no subtype found for asset type: 'model'".to_string());
@@ -56,7 +56,8 @@ impl AssetType {
 //this shit is awful!!!
 //desperately need to redo this once i know what im doing
 impl Asset {
-    pub fn new(loc: &str, id: &str, name: &str, tpe: &str, sub_type: &str) -> Result<Self, String> {
+    pub fn new(loc: &str, id: &str, name: &str, tpe: &str, sub_type: &str) -> 
+            Result<Self, String> {
         let asset_type = AssetType::new(tpe, sub_type)?;
         let location = if loc == "" {None} else {Some(loc.to_string())};
         Ok(Asset{

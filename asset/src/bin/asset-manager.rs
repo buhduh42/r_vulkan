@@ -61,7 +61,7 @@ fn parse_assets_dir(assets_path: &Path) -> Result<Vec<Asset>, String> {
                         to_ret.push(
                             Asset{
                                 location: Some(path.display().to_string()),
-                                asset_type: AssetType::Model(Some(ModelType::Wavefront)),
+                                asset_type: AssetType::Model(ModelType::Wavefront),
                                 name: name.to_string(),
                                 id: name.to_string(),
                             },
@@ -74,6 +74,8 @@ fn parse_assets_dir(assets_path: &Path) -> Result<Vec<Asset>, String> {
             }
         }
     }
+    /*
+    //for now textures are referenced via their models
     let texture_path = assets_path.join(REL_TEXTURE_PATH);
     if texture_path.exists() {
         let texture_glob = texture_path.join(format!("*.{TEXTURE_EXTENSION}"));
@@ -98,6 +100,7 @@ fn parse_assets_dir(assets_path: &Path) -> Result<Vec<Asset>, String> {
         }
 
     }
+    */
     Ok(to_ret)
 }
 

@@ -169,6 +169,11 @@ impl WavefrontLineType {
 }
 
 impl Importer for Wavefront {
+    //only doing textures for now
+    fn attach_material<'a, I>(&self, model: &mut Model, lines: I) -> Result<(), String>
+            where I: Iterator<Item = &'a String> {
+        todo!("not implemneted");
+    }
     fn generate_model<'a, I>(&self, lines: I) -> Result<Model, String>
             where I: Iterator<Item = &'a String> {
         let mut pos_vec: Vec<String> = vec![];

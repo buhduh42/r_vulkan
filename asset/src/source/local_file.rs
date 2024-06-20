@@ -75,13 +75,8 @@ impl AssetSource for LocalFile {
         for asset in assets {
             let sub_type: Option<String>;
             let a_type: &str = match asset.asset_type {
-                AssetType::Model(sub_type_opt) => {
-                    sub_type = match sub_type_opt {
-                        Some(model_type) => {
-                            Some(format!("{model_type}").to_lowercase())
-                        }
-                        None => None,
-                    };
+                AssetType::Model(model_type) => {
+                    sub_type = Some(format!("{model_type}").to_lowercase());
                     MODEL_TYPE
                 },
                 AssetType::Texture => {

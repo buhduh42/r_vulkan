@@ -22,7 +22,7 @@ use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
 use crate::{
     model::{
-        primitives, NormalVector, NormalVertex, PositionVector, TextureVector
+        model_manager::ModelManager, primitives, NormalVector, NormalVertex, PositionVector, TextureVector
     }, 
     window::Window,
 };
@@ -196,7 +196,7 @@ pub struct Vulkan {
 impl Vulkan {
     //TODO, gonna need to figure out this VkResult stuff
     //fn draw(self: &Self) -> VkResult<vk::RenderPass> {
-    pub fn get_draw_fn(self: &Self) -> Box<dyn FnMut() +'_> {
+    pub fn get_draw_fn(self: &Self, model_manager: &mut ModelManager) -> Box<dyn FnMut() +'_> {
         let renderpass_attachments = [
             vk::AttachmentDescription {
                 format: self.surface_format.format,
@@ -247,7 +247,8 @@ impl Vulkan {
 
 
         //let model = primitives::hardcoded_square();
-        let model = primitives::make_primitive(primitives::Primitive::Sphere);
+        //let model = primitives::make_primitive(primitives::Primitive::Sphere);
+        let model = model_manager.get_model_by_id("sphere").unwrap();
         let to_ret: Box<dyn FnMut()>;
         unsafe {
             let renderpass = self

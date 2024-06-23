@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+ash = "0.38.0"
 glob = "0.3.1"
+image = "0.25.1"
 regex = "1.10.4"
-
-[workspace]

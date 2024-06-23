@@ -1,15 +1,17 @@
 use std::{
     fs::File,
-    fmt::Debug,
+    cell::RefCell,
 };
 
-use serde::{Serialize, Deserialize};
+//use serde::{Serialize, Deserialize};
 
 pub use glm::Vector4;
 pub use glm::Vector2;
 
-pub mod primitives;
 pub mod model_manager;
+pub mod material;
+
+use material::Material;
 
 //#[derive(Serialize, Deserialize, Debug)]
 pub enum Mesh {
@@ -107,6 +109,11 @@ pub struct Model {
     pub name: String,
     pub mesh: Mesh,
     pub indeces: Vec<IndexCoord>,
+    pub materials: Vec<Material>,
+    //was going to support multiple materials in a Vec
+    //but haven't figured out how to get something out of a Vec
+    //without cloning yet
+    //pub material: Option<Material>,
 }
 
 impl Model {

@@ -22,7 +22,7 @@ use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 
 use crate::{
     model::{
-        model_manager::ModelManager, primitives, NormalVector, NormalVertex, PositionVector, TextureVector
+        model_manager::ModelManager, NormalVertex,
     }, 
     window::Window,
 };
@@ -492,14 +492,12 @@ impl Vulkan {
                 .bind_buffer_memory(uniform_color_buffer, uniform_color_buffer_memory, 0)
                 .unwrap();
 
-            //TODO(resources)
-            //let image = image::load_from_memory(include_bytes!("../assets/rust.png"))
-            let image = image::load_from_memory(include_bytes!("../../assets/textures/2k_jupiter.png"))
-                .unwrap()
-                .to_rgba8();
-            let (width, height) = image.dimensions();
+            //let tex_image = model.material.unwrap().texture;
+            let tex_image = &model.materials[0].texture;
+            //let mat = model.material.unwrap();
+            let (width, height) = tex_image.dimensions();
             let image_extent = vk::Extent2D { width, height };
-            let image_data = image.into_raw();
+            let image_data = tex_image.as_raw();
             let image_buffer_info = vk::BufferCreateInfo {
                 size: (mem::size_of::<u8>() * image_data.len()) as u64,
                 usage: vk::BufferUsageFlags::TRANSFER_SRC,

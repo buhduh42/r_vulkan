@@ -1,7 +1,13 @@
+/* The purpose of this module is to maintain a hash table by model id, each request
+ * to a model with a given id returns an Rc pointer to the model, loading the model
+ * if necessary.  Actual hash structure has form Hash<String, Weak<Model>>.
+ */
+
 use std::{
-    collections::HashMap, fs::read_to_string, rc::{
+    collections::HashMap,
+    rc::{
         Rc, Weak
-    }
+    },
 };
 
 use asset::{
@@ -12,7 +18,7 @@ use asset::{
     },
 };
 
-use crate::importer::{wavefront::Wavefront, Importer};
+use crate::{importer::{wavefront::Wavefront, Importer}, RenderResult};
 
 use super::Model;
 
@@ -29,7 +35,7 @@ impl ModelManager {
         }
     }
 
-    fn load_model(&mut self, id: &str) -> Result<Rc<Model>, String> {
+    fn load_model(&mut self, id: &str) -> RenderResult<Rc<Model>> {
         let asset = self.asset_source.get_by_id(id)?;
         let model_type = match asset.asset_type {
             AssetType::Model(model_type) => model_type,
@@ -47,16 +53,7 @@ impl ModelManager {
         if let None = asset.location {
             return Err(format!("location required to load model, id: {id}"));
         }
-        let location = asset.location.unwrap();
-        let lines: Vec<String> = match read_to_string(&location) {
-            Ok(lines) => {
-                lines.lines().map(|l| l.to_string()).collect()
-            },
-            Err(err) => {
-                return Err(format!("got error: {err} when reading model file: '{location}', for id: {id}"));
-            },
-        };
-        let model = importer.generate_model(lines.iter())?;
+        let model = importer.generate_model(&asset.location.unwrap())?;
         Ok(Rc::new(model))
     }
 

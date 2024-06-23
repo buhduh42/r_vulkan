@@ -3,7 +3,10 @@ this serves as *targeted* list of things i need to do, will break it down into m
 1.  Write basic asset tool, needs to generate an XML file and save to disk or print to stdout, functions as a standalone bin: Done
 2. The time has come for make!!!: Done for asset generation at least
 3. Integrate xml asset manifest for resources
-4. Is it time to start rolling "real" errors instead of all these dumbass strings?
+4. Is it time to start rolling "real" errors instead of all these dumbass strings?, ended up rolling a "pub type RenderResult<T> = Result<T, String>"
+    so I can uniformly use that instead, now I need to use it everywhere so I can change String to Error in a single place.
+    I'm writing a bunch of: fn().map_err(|e| e.to_string())?; to return the Err(String) type, should probably figure out how to roll that
+    into the RenderResult stuff instead
 5.  Do I need a config?
 6. For optimization, investigate LTO
 7. Investigate default enums, see, ModelManger::load_model()
@@ -11,3 +14,5 @@ this serves as *targeted* list of things i need to do, will break it down into m
             Some(model_type) => model_type,
             None => ModelType::Wavefront,
         };
+8. Port all Result<T, String> to RendererResult<T, String>
+9. Need to write a logger, and probably figure out a proper debugger

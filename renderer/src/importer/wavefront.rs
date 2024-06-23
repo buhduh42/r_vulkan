@@ -1,14 +1,25 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap, fs::read_to_string, path::{
+        Path, PathBuf
+    },
+};
 
 use regex::Regex;
 
 use super::Importer;
 
-use crate::model::{
-    Mesh, Model, NormalVector, 
-    NormalVertex, PositionVector, TextureVector, 
-    IndexVector, IndexCoord,
-    DEFAULT_MODEL_NAME,
+const WAVEFRONT_MAT_EXTENSION: &str = "mtl";
+
+use crate::{
+    model::{
+        material::Material, 
+        IndexCoord, 
+        IndexVector, 
+        DEFAULT_MODEL_NAME,
+        Mesh, Model, NormalVector, 
+        NormalVertex, PositionVector, TextureVector,
+    },
+    RenderResult,
 };
 
 pub struct Wavefront{
@@ -16,6 +27,15 @@ pub struct Wavefront{
     uv: Vec<TextureVector>,
     norm: Vec<NormalVector>,
     name: String,
+}
+
+fn mat_file_from_obj_file(obj_file: &str) -> Option<PathBuf> {
+    let mut mat_file = PathBuf::from(obj_file);
+    mat_file.set_extension(WAVEFRONT_MAT_EXTENSION);
+    if !Path::new(&mat_file).exists() {
+        return None;
+    }
+    Some(mat_file)
 }
 
 impl Wavefront {
@@ -91,7 +111,7 @@ impl Wavefront {
     //this call isn't in the critical loop, but what it generates WILL be
     //not sure about the above anymore...will need to run it through a debugger
     //though may be good at some point to write a defragger for Model
-    fn generate_model<'a, I>(&self, vals: I) -> Result<Model, String>
+    fn generate_model<'a, I>(&self, vals: I) -> RenderResult<Model>
             where I: Iterator<Item = &'a String> {
         let vert_1 = r"(?P<vert_1>(?P<pos_1>\d+)/(?P<tex_1>\d+)/(?P<norm_1>\d+))";
         let vert_2 = r"(?P<vert_2>(?P<pos_2>\d+)/(?P<tex_2>\d+)/(?P<norm_2>\d+))";
@@ -139,8 +159,34 @@ impl Wavefront {
             mesh: Mesh::NormalMesh(vertices),
             indeces,
             name: self.name.clone(),
+            materials: vec!(),
         })
     }
+
+    //only supporting a single, optional(Result) material for now
+    //this sucks, but just need to keep moving on, I can clean up the model stuff later
+    //basically, wanted to have Model.materials == Vec<Material>
+    //where Material.texture == TextureImage, but can't get a Material out of the Vec
+    //without cloning, need to think about this some
+    fn parse_mat_file(&self, mat_file: &PathBuf) -> RenderResult<Material> {
+        let lines = read_to_string(mat_file).map_err(|e| e.to_string())?;
+        for l in lines.lines() {
+            let to_check: &str = l.trim();
+            //let to_ret: Material;
+            if to_check.starts_with("map_Kd ") {
+                if let Some((_, path)) = to_check.split_once(char::is_whitespace) {
+                    if let Ok(mat) = Material::new(&PathBuf::from(path)) {
+                        return Ok(mat);
+                    };
+                }
+            }
+
+        }
+        //don't fucking care, shut the fuck up and print it
+        let file_tex = mat_file.to_string_lossy();
+        Err(format!("Could not parse material file: {file_tex}"))
+    }
+
 }
 
 enum WavefrontLineType {
@@ -170,19 +216,20 @@ impl WavefrontLineType {
 
 impl Importer for Wavefront {
     //only doing textures for now
-    fn attach_material<'a, I>(&self, model: &mut Model, lines: I) -> Result<(), String>
-            where I: Iterator<Item = &'a String> {
-        todo!("not implemneted");
-    }
-    fn generate_model<'a, I>(&self, lines: I) -> Result<Model, String>
-            where I: Iterator<Item = &'a String> {
+    fn generate_model(&self, loc: &str) -> RenderResult<Model> {
         let mut pos_vec: Vec<String> = vec![];
         let mut text_vec: Vec<String> = vec![];
         let mut norm_vec: Vec<String> = vec![];
         let mut face_vec: Vec<String> = vec![];
         let mut name_opt: Option<String> = None;
-        let name_re = Regex::new(r"^o (?P<name>\w+)\s*$").unwrap();
-        lines.for_each(|l| {
+        let name_re = Regex::new(r"^o (?P<name>\w+)\s*$").map_err(|e| {
+            format!(
+                "failed generating regex for a wavefront model parser, with error: {e}")
+                .to_string()
+            }
+        )?;
+        let lines = read_to_string(loc).map_err(|e| e.to_string())?;
+        lines.lines().for_each(|l| {
             if let Some(line_type) = WavefrontLineType::get(l) {
                 let line = l.to_string();
                 match line_type {
@@ -221,7 +268,11 @@ impl Importer for Wavefront {
         if let Err(res) = wavefront.load_texture_vector(text_vec.iter()) {
             return Err(res);
         }
-        wavefront.generate_model(face_vec.iter())
+        let mut model = wavefront.generate_model(face_vec.iter())?;
+        if let Some(mat_file) = mat_file_from_obj_file(loc) {
+            model.materials = vec!(self.parse_mat_file(&mat_file)?);
+        }
+        Ok(model)
     }
 }
 

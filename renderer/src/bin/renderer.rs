@@ -17,6 +17,9 @@ use asset::source::{
 struct Args {
     #[arg(short, long)] 
     assets_manifest: String,
+
+    #[arg(short, long)] 
+    shader_dir: String,
 }
 
 fn get_asset_source(manifest: &str) -> Result<impl AssetSource, String> {

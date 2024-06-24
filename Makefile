@@ -1,17 +1,22 @@
-ROOT_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
+export ROOT_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 BUILD := ${ROOT_DIR}/build
 ASSET_MANIFEST := ${BUILD}/asset_manifest.xml
-ASSETS_DIR := ${ROOT_DIR}/assets
+export ASSETS_DIR := ${ROOT_DIR}/assets
 ASSETS := $(shell find ${ASSETS_DIR} -type f)
 TARGET := ${ROOT_DIR}/target
 ASSET_MANAGER := ${TARGET}/debug/asset-manager
 
+include ${ROOT_DIR}/shaders.mk
+
 .PHONY: all
-all: ${ASSET_MANIFEST}
-	cargo run --bin renderer -- --assets-manifest $<
+all: ${ASSET_MANIFEST} shaders
+	cargo run --bin renderer -- --assets-manifest $< --shader_dir ${BUILD}/shaders
 
 .PHONY: assets
 assets: ${ASSET_MANIFEST}
+
+.PHONY: shaders
+shaders: ${BUILD}
 
 ${ASSET_MANIFEST}: ${ASSETS} ${ASSET_MANAGER} ${BUILD}
 	${ASSET_MANAGER} -x -a ${ASSETS_DIR} -m $@
